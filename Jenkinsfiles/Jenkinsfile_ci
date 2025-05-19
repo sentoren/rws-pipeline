@@ -1,13 +1,13 @@
 pipeline {
     agent any
     environment {
-        LIQUIBASE_LICENSE_KEY = credentials(??)
+        // LIQUIBASE_LICENSE_KEY = credentials(??)
         LIQUIBASE_COMMAND_URL = "jdbc:postgresql://localhost:5432/dev"
         LIQUIBASE_COMMAND_CHANGELOG_FILE = "changelog-root.xml"
-        LIQUIBASE_SEARCH_PATH = ??
-        LIQUIBASE_COMMAND_CHECKS_SETTINGS_FILE = ??
-        FLOW_FILE = ??
-        LB_FLOW_ENV = "dev"
+        // LIQUIBASE_SEARCH_PATH = ??
+        // LIQUIBASE_COMMAND_CHECKS_SETTINGS_FILE = ??
+        // FLOW_FILE = ??
+        // LB_FLOW_ENV = "dev"
     }
     stages {
         stage("Precheck") {
