@@ -1,0 +1,24 @@
+stages:
+
+    Default:
+
+        actions:
+            # policy checks for changelogs
+            -   type: liquibase
+                command: checks run
+                cmdArgs: {checks-scope: changelog}
+
+            # run update
+            -   type: liquibase
+                command: update
+
+            # policy checks for database
+            -   type: liquibase
+                command: checks run
+                cmdArgs: {checks-scope: database}
+
+# always runs endStage
+endStage:
+    actions:
+        -   type: liquibase
+            command: history
