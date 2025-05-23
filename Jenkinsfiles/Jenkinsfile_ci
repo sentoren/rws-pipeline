@@ -1,50 +1,65 @@
 pipeline {
-    agent any
+    agent {
+        label "agent1"
+    }
     environment {
-        LIQUIBASE_LICENSE_KEY = credentials(??)
-        LIQUIBASE_COMMAND_URL = "jdbc:postgresql://localhost:5432/dev"
-        LIQUIBASE_COMMAND_CHANGELOG_FILE = "changelog-root.xml"
-        LIQUIBASE_SEARCH_PATH = ??
-        LIQUIBASE_COMMAND_CHECKS_SETTINGS_FILE = ??
-        FLOW_FILE = ??
-        LB_FLOW_ENV = "dev"
+        LIQUIBASE_LICENSE_KEY = credentials("LIQUIBASE_LICENSE_KEY")
+        LIQUIBASE_COMMAND_URL = credentials("DEV_LIQUIBASE_COMMAND_URL")
+        LIQUIBASE_COMMAND_USERNAME = credentials("DEV_LIQUIBASE_COMMAND_USERNAME")
+        LIQUIBASE_COMMAND_PASSWORD = credentials("DEV_LIQUIBASE_COMMAND_PASSWORD")
     }
     stages {
         stage("Precheck") {
             steps {
-                sh 'echo "Current PATH: $PATH"'
-                sh 'java -version'
+                sh 'echo xxxxxxxxxx checking connection to dev database xxxxxxxxxx'
+                sh '/opt/liquibase connect --url=$LIQUIBASE_COMMAND_URL --password=$LIQUIBASE_COMMAND_PASSWORD --username=$LIQUIBASE_COMMAND_USERNAME'
+                sh 'echo xxxxxxxxxx pausing to allow time for repo upload xxxxxxxxxx'
+                sleep 10
             }
         }
-        stage("Liquibase") {
+        stage("Github checkout") {
             steps {
-                sh 'echo ***** Run flow file Jenkinsfile_ci *****'
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: ??, 
-                        usernameVariable: 'LIQUIBASE_COMMAND_USERNAME', 
-                        passwordVariable: 'LIQUIBASE_COMMAND_PASSWORD'
-                    )
-                ]) {
-                    sh 'echo ***** Run flow file *****'
-                    sh 'liquibase flow'
+                sh 'echo xxxxxxxxxx cloning repo from github xxxxxxxxxx'
+                checkout changelog: false, poll: false, scm: scmGit(branches: [[name: '*/main']], extensions: [[$class: 'WipeWorkspace']], userRemoteConfigs: [[url: 'https://github.com/sentoren/rws-liquibase']])
+                sleep 10
+            }
+        }
+        stage("Liquibase validate") {
+            steps {
+                sh 'echo xxxxxxxxxx validating liquibase changelog xxxxxxxxxx'
+                dir('database') {
+                    sh '/opt/liquibase status'
+                    sh '/opt/liquibase validate'
                 }
             }
         }
-        stage("Package Project") {
+        stage("Liquibase update") {
             steps {
-                sh 'rm liquibase.flowfile.yaml'
-                zip zipFile: "snapshot${BUILD_NUMBER}.zip", archive: false, dir: 'resources/'
-                archiveArtifacts artifacts: "snapshot${BUILD_NUMBER}.zip", fingerprint: true
+                dir('database') {
+                    sh 'echo xxxxxxxxxx now we are cooking - liquibase updates being applied xxxxxxxxxx'
+                    sh '/opt/liquibase update --changelog-file=changelog-root.xml --report-enabled=false'
+                }
             }
         }
-        stage("Upload to artifactory") {
-            ??
+
+        stage("Package Project") {
+            steps {
+                sh 'echo xxxxxxxxxx zip it up xxxxxxxxxx'
+                zip zipFile: "snapshot_dev_build.zip", archive: false
+                archiveArtifacts artifacts: "snapshot_dev_build.zip", fingerprint: true
+            }
         }
+
+        stage("Trigger Test Pipeline") {
+            steps {
+                sh 'echo xxxxxxxxxx moving on to TEST xxxxxxxxxx'
+            }
+        }
+
     }
     post {
         always {
-            sh 'echo ***** Clean up workspace *****'
+            sh 'echo xxxxxxxxxx clean up workspace xxxxxxxxxx'
             deleteDir()
         }
     }

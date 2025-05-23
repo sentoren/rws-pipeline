@@ -1,0 +1,50 @@
+pipeline {
+    agent {
+        label "agent1"
+    }
+    environment {
+        LIQUIBASE_LICENSE_KEY = credentials("LIQUIBASE_LICENSE_KEY")
+        LIQUIBASE_COMMAND_URL = credentials("PROD_LIQUIBASE_COMMAND_URL")
+        LIQUIBASE_COMMAND_USERNAME = credentials("PROD_LIQUIBASE_COMMAND_USERNAME")
+        LIQUIBASE_COMMAND_PASSWORD = credentials("PROD_LIQUIBASE_COMMAND_PASSWORD")
+    }
+    stages {
+        stage("Precheck") {
+            steps {
+                sh 'echo xxxxxxxxxx checking connection to prod database xxxxxxxxxx'
+                sh '/opt/liquibase connect --url=$LIQUIBASE_COMMAND_URL --password=$LIQUIBASE_COMMAND_PASSWORD --username=$LIQUIBASE_COMMAND_USERNAME'
+            }
+        }
+        stage("Copy TEST artifact") {
+            steps {
+                sh 'echo xxxxxxxxxx copying and unzipping test build artifact xxxxxxxxxx'
+                copyArtifacts(projectName: 'testPipeline')
+                unzip zipFile: 'snapshot_test_build.zip'
+            }
+        }
+        stage("Liquibase validate") {
+            steps {
+                sh 'echo xxxxxxxxxx validating liquibase changelog xxxxxxxxxx'
+                dir('database') {
+                    sh '/opt/liquibase status'
+                    sh '/opt/liquibase validate'
+                }
+            }
+        }
+        stage("Liquibase update") {
+            steps {
+                dir('database') {
+                    sh 'echo xxxxxxxxxx now we are cooking - liquibase updates being applied to production xxxxxxxxxx'
+                    sh '/opt/liquibase update --changelog-file=changelog-root.xml --report-enabled=false'
+                }
+            }
+        }
+
+    }
+    post {
+        always {
+            sh 'echo xxxxxxxxxx clean up workspace xxxxxxxxxx'
+            deleteDir()
+        }
+    }
+}

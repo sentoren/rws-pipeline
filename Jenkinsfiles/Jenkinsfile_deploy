@@ -1,0 +1,65 @@
+pipeline {
+    agent {
+        label "agent1"
+    }
+    environment {
+        LIQUIBASE_LICENSE_KEY = credentials("LIQUIBASE_LICENSE_KEY")
+        LIQUIBASE_COMMAND_URL = credentials("TEST_LIQUIBASE_COMMAND_URL")
+        LIQUIBASE_COMMAND_USERNAME = credentials("TEST_LIQUIBASE_COMMAND_USERNAME")
+        LIQUIBASE_COMMAND_PASSWORD = credentials("TEST_LIQUIBASE_COMMAND_PASSWORD")
+    }
+    stages {
+        stage("Precheck") {
+            steps {
+                sh 'echo xxxxxxxxxx checking connection to test database xxxxxxxxxx'
+                sh '/opt/liquibase connect --url=$LIQUIBASE_COMMAND_URL --password=$LIQUIBASE_COMMAND_PASSWORD --username=$LIQUIBASE_COMMAND_USERNAME'
+            }
+        }
+        stage("Copy DEV artifact") {
+            steps {
+                sh 'echo xxxxxxxxxx copying and unzipping dev build artifact xxxxxxxxxx'
+                copyArtifacts(projectName: 'thepipeline')
+                unzip zipFile: 'snapshot_dev_build.zip'
+            }
+        }
+        stage("Liquibase validate") {
+            steps {
+                sh 'echo xxxxxxxxxx validating liquibase changelog xxxxxxxxxx'
+                dir('database') {
+                    sh '/opt/liquibase status'
+                    sh '/opt/liquibase validate'
+                }
+            }
+        }
+        stage("Liquibase update") {
+            steps {
+                dir('database') {
+                    sh 'echo xxxxxxxxxx now we are cooking - liquibase updates being applied xxxxxxxxxx'
+                    sh '/opt/liquibase update --changelog-file=changelog-root.xml --report-enabled=false'
+                }
+            }
+        }
+
+        stage("Package Project") {
+            steps {
+                sh 'echo xxxxxxxxxx zip it up xxxxxxxxxx'
+                zip zipFile: "snapshot_test_build.zip", archive: false
+                archiveArtifacts artifacts: "snapshot_test_build.zip", fingerprint: true
+            }
+        }
+
+        stage("Trigger Prod Pipeline") {
+            steps {
+                sh 'echo xxxxxxxxxx moving on to PROD xxxxxxxxxx'
+                // trigger next pipeline, pass along the artifact
+            }
+        }
+
+    }
+    post {
+        always {
+            sh 'echo xxxxxxxxxx clean up workspace xxxxxxxxxx'
+            deleteDir()
+        }
+    }
+}
