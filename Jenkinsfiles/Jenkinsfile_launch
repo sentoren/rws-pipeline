@@ -22,15 +22,6 @@ pipeline {
                 unzip zipFile: 'snapshot_test_build.zip'
             }
         }
-        stage("Liquibase validate") {
-            steps {
-                sh 'echo xxxxxxxxxx validating liquibase changelog xxxxxxxxxx'
-                dir('database') {
-                    sh '/opt/liquibase status'
-                    sh '/opt/liquibase validate'
-                }
-            }
-        }
         stage("Liquibase update") {
             steps {
                 dir('database') {
@@ -39,7 +30,6 @@ pipeline {
                 }
             }
         }
-
     }
     post {
         always {

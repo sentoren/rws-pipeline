@@ -28,7 +28,6 @@ pipeline {
             steps {
                 sh 'echo xxxxxxxxxx validating liquibase changelog xxxxxxxxxx'
                 dir('database') {
-                    sh '/opt/liquibase status'
                     sh '/opt/liquibase validate'
                 }
             }

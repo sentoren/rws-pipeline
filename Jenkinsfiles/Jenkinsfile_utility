@@ -1,0 +1,42 @@
+pipeline {
+    agent {
+        label "agent1"
+    }
+    environment {
+        LIQUIBASE_LICENSE_KEY = credentials("LIQUIBASE_LICENSE_KEY")
+        LIQUIBASE_COMMAND_URL = credentials("${targetDB}_LIQUIBASE_COMMAND_URL")
+        LIQUIBASE_COMMAND_USERNAME = credentials("${targetDB}_LIQUIBASE_COMMAND_USERNAME")
+        LIQUIBASE_COMMAND_PASSWORD = credentials("${targetDB}_LIQUIBASE_COMMAND_PASSWORD")
+
+    }
+    stages {
+        stage("Get Parameters") {
+            steps {
+                echo "Target Database: ${targetDB}"
+                echo "Command to Run: ${liquibaseCommand}"
+                echo "The value passed: ${commandValue}"
+            }
+        }
+
+        stage("Connect to DB") {
+            steps {
+                sh "echo xxxxxxxxxx checking connection to ${targetDB} database xxxxxxxxxx"
+                sh '/opt/liquibase connect --url=$LIQUIBASE_COMMAND_URL --password=$LIQUIBASE_COMMAND_PASSWORD --username=$LIQUIBASE_COMMAND_USERNAME'
+            }
+        }
+
+        stage("Liquibase Command Run") {
+            steps {
+                sh "echo xxxxxxxxxx running liquibase command ${liquibaseCommand} ${commandValue} xxxxxxxxxx"
+                sh "/opt/liquibase ${liquibaseCommand} ${commandValue}"
+            }
+        }
+
+    }
+    post {
+        always {
+            sh 'echo xxxxxxxxxx clean up workspace xxxxxxxxxx'
+            deleteDir()
+        }
+    }
+}

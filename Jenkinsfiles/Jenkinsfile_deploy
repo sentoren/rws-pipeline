@@ -22,20 +22,11 @@ pipeline {
                 unzip zipFile: 'snapshot_dev_build.zip'
             }
         }
-        stage("Liquibase validate") {
-            steps {
-                sh 'echo xxxxxxxxxx validating liquibase changelog xxxxxxxxxx'
-                dir('database') {
-                    sh '/opt/liquibase status'
-                    sh '/opt/liquibase validate'
-                }
-            }
-        }
         stage("Liquibase update") {
             steps {
                 dir('database') {
                     sh 'echo xxxxxxxxxx now we are cooking - liquibase updates being applied xxxxxxxxxx'
-                    sh '/opt/liquibase update --changelog-file=changelog-root.xml --report-enabled=false'
+                    sh '/opt/liquibase update --changelog-file=changelog-root.xml --report-enabled=false --rollback-on-error=true'
                 }
             }
         }
